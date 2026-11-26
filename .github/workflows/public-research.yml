@@ -1,0 +1,34 @@
+name: Market Lab public research
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: market-lab-public-research
+  cancel-in-progress: false
+jobs:
+  historical-simulation:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Replay fixed historical public market data
+        shell: bash
+        run: |
+          python -m zipfile -e Market-Lab-GitHub-Research-Only.zip "$RUNNER_TEMP/market-lab"
+          cd "$RUNNER_TEMP/market-lab"
+          python -B -X utf8 -m scripts.public_research_runner --out "$RUNNER_TEMP/market-lab-result.json"
+      - name: Publish result for Market Lab
+        shell: bash
+        run: |
+          {
+            printf '### Market Lab historical simulation\n\n```json\n'
+            cat "$RUNNER_TEMP/market-lab-result.json"
+            printf '```\n'
+          } >> "$GITHUB_STEP_SUMMARY"
